@@ -2,28 +2,10 @@ import torch
 from pytorch_lightning import LightningModule
 from torch.optim import Adam
 from torch.optim.lr_scheduler import CosineAnnealingLR
-from sklearn.metrics import confusion_matrix
-import wandb
-import numpy as np
-
-import io
-from PIL import Image
-import matplotlib.pyplot as plt
-import seaborn as sns
 from abc import ABC, abstractmethod
 
 from logger import *
 from metrics_manager import *
-
-import os
-import sys
-import inspect
-
-currentdir = os.path.dirname(
-    os.path.abspath(inspect.getfile(inspect.currentframe()))
-)
-parentdir = os.path.dirname(currentdir)
-sys.path.insert(0, parentdir)
     
 class BaseLightningModule(LightningModule):
     """
