@@ -216,6 +216,87 @@ class BaseLightningModule(LightningModule):
         return [optimizer], [scheduler]
 
 
+class AutoencoderLightningModule(BaseLightningModule):
+    """
+    LightningModule implementation for autoencoding tasks.
+
+    Args:
+        model: Model instance representing the Network Model.
+        model_name: Model's name.
+        loss_fn: Loss function used for training.
+        metrics: Metrics used for evaluation.
+        lr (float): Learning rate for the optimizer.
+        scheduler_max_it (int): Maximum number of iterations for the learning rate scheduler.
+        weight_decay (float): Weight decay for the optimizer.
+
+    Attributes:
+        model: Model instance representing the Convolution Network Model.
+        model_name: Model's name.
+        loss_fn: Loss function used for training.
+        train_metrics: Metrics used for training evaluation.
+        val_metrics: Metrics used for validation evaluation.
+        test_metrics: Metrics used for testing evaluation.
+        lr (float): Learning rate for the optimizer.
+        scheduler_max_it (int): Maximum number of iterations for the learning rate scheduler.
+    """
+
+    def __init__(
+        self,
+        model,
+        model_name,
+        loss_fn,
+        metrics,
+        lr,
+        scheduler_max_it,
+        weight_decay=0,        
+    ):
+        super(AutoencoderLightningModule, self).__init__(
+            model=model,
+            model_name=model_name,
+            loss_fn=loss_fn,
+            metrics=metrics,
+            lr=lr,
+            scheduler_max_it=scheduler_max_it,
+            weight_decay=weight_decay
+        )
+        
+        self.configure_metrics_managers()
+        self.configure_loggers()
+
+    def _final_step(self, y_hat):
+        """
+        Final step of the forward pass. Includes the final activation function if any and the final prediction.
+        This should be overriden by the subclass if needed (for example for classification tasks).
+
+        Args:
+            y_hat: Predicted outputs.
+
+        Returns:
+            Predicted outputs.
+        """
+        return y_hat
+        
+    def configure_metrics_managers(self):
+        """
+        Configure metrics managers.
+        """
+        self.train_metrics_manager = MetricsManager(module=self, metrics=self.train_metrics)
+        self.val_metrics_manager = MetricsManager(module=self, metrics=self.val_metrics)
+        self.test_metrics_manager = MetricsManager(module=self, metrics=self.test_metrics)
+        
+    def configure_loggers(self):
+        """
+        Configure loggers.
+        """
+        self.train_loss_logger = ScalarLogger(prefix="train/", module=self, scalar_name="loss")
+        self.val_loss_logger = ScalarLogger(prefix="val/", module=self, scalar_name="loss")
+        self.test_loss_logger = ScalarLogger(prefix="test/", module=self, scalar_name="loss")
+        
+        self.train_metrics_logger = DictLogger(prefix="train/", module=self, metrics=self.train_metrics)
+        self.val_metrics_logger = DictLogger(prefix="val/", module=self, metrics=self.val_metrics)
+        self.test_metrics_logger = DictLogger(prefix="test/", module=self, metrics=self.test_metrics)
+
+
 
 class ClassificationLightningModule(BaseLightningModule):
     """
