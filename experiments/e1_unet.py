@@ -1,4 +1,3 @@
-# sin filtro
 def main():
     import os
     import sys
@@ -20,10 +19,9 @@ def main():
     from pytorch_lightning import Trainer
     from pytorch_lightning.callbacks import EarlyStopping
     from data.data_modules import PlantDiseaseDataModule, Sampling
-    from torchmetrics.regression import (
-        MeanAbsoluteError,
-        MeanSquaredError
-    )
+    from data.datasets import ImageAutoencoderFolderDataset
+    from torchmetrics.regression import MeanAbsoluteError, MeanSquaredError
+
     from torchmetrics import MetricCollection
     from models.unet import Unet, get_unet_transformations
     from torch import nn
@@ -43,21 +41,27 @@ def main():
 
     train_transform, test_transform = get_unet_transformations()
 
+    train_dataset = ImageAutoencoderFolderDataset(
+        root_dir=config.ROOT_DIR, transform=train_transform
+    )
+    test_dataset = ImageAutoencoderFolderDataset(
+        root_dir=config.ROOT_DIR, transform=test_transform
+    )
+
     plant_dm = PlantDiseaseDataModule(
         root_dir=config.ROOT_DIR,
         batch_size=config.BATCH_SIZE,
+        train_folder_dataset=train_dataset,
+        test_folder_dataset=test_dataset,
         test_size=config.TEST_SIZE,
         use_index=config.USE_INDEX,
         indices_dir=config.INDICES_DIR,
         sampling=Sampling.NONE,
-        train_transform=train_transform,
-        test_transform=test_transform,
     )
 
     plant_dm.prepare_data()
     plant_dm.create_data_loaders()
 
-    metrics_data = []
     for i in range(config.NUM_TRIALS):
         unet = Unet(device=device)
         model = AutoencoderLightningModule(
@@ -79,13 +83,13 @@ def main():
 
         checkpoint_callback = ModelCheckpoint(
             monitor="val/loss",
-            dirpath=config.CONVNEXT_DIR,
-            filename=config.CONVNEXT_FILENAME + str(i),
+            dirpath=config.AUTOENCODER_DIR,
+            filename=config.AUTOENCODER_FILENAME + str(i),
             save_top_k=config.TOP_K_SAVES,
             mode="min",
         )
 
-        id = config.CONVNEXT_FILENAME + str(i) + "_" + wandb.util.generate_id()
+        id = config.AUTOENCODER_FILENAME + str(i) + "_" + wandb.util.generate_id()
         wandb_logger = WandbLogger(project=config.WANDB_PROJECT, id=id, resume="allow")
 
         trainer = Trainer(
@@ -95,33 +99,10 @@ def main():
             log_every_n_steps=1,
         )
 
-        trainer.fit(model, datamodule=covid_dm)
+        # trainer.fit(model, datamodule=plant_dm)
+        trainer.test(model, datamodule=plant_dm)
 
-        # save the metrics per class as well as the confusion matrix to a csv file
-        metrics_data.append(trainer.test(model, datamodule=covid_dm)[0])
-
-        results_per_class_metrics = model.test_vect_metrics_result
-
-        metrics_per_class = pd.DataFrame(
-            {
-                "Accuracy": results_per_class_metrics["Accuracy"].cpu().numpy(),
-                "Precision": results_per_class_metrics["Precision"].cpu().numpy(),
-                "Recall": results_per_class_metrics["Recall"].cpu().numpy(),
-            },
-            index=config.CLASS_NAMES,
-        )
-
-        confusion_matrix = pd.DataFrame(
-            results_per_class_metrics["Confusion Matrix"].cpu().numpy(),
-            index=config.CLASS_NAMES,
-            columns=config.CLASS_NAMES,
-        )
-
-        metrics_per_class.to_csv(config.CONVNEXT_CSV_PER_CLASS_FILENAME)
-        confusion_matrix.to_csv(config.CONVNEXT_CSV_CM_FILENAME)
         wandb.finish()
-
-    pd.DataFrame(metrics_data).to_csv(config.CONVNEXT_CSV_FILENAME, index=False)
 
 
 if __name__ == "__main__":

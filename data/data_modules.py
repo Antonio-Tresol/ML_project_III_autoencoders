@@ -6,7 +6,7 @@ import os
 # Utils
 import pickle
 import numpy as np
-from typing import List
+from typing import List, Union
 from enum import Enum
 
 # Sklearn
@@ -18,7 +18,10 @@ from torch.utils.data import Dataset, DataLoader, Subset, WeightedRandomSampler
 from pytorch_lightning import LightningDataModule
 
 # Customs
-from data.datasets import ImageFolderDataset
+from data.datasets import (
+    ImageAutoencoderFolderDataset,
+    ImageClassificationFolderDataset,
+)
 import configuration as config
 
 
@@ -32,7 +35,7 @@ class Sampling(Enum):
 # Utility class for managing indices
 class IndexManager:
     @staticmethod
-    def save_indices(indices: List[int], indices_path: str):
+    def save_indices(indices: list[int], indices_path: str):
         """
         Save indices to a file.
 
@@ -62,7 +65,7 @@ class IndexManager:
 class DataSplitter:
     @staticmethod
     def split_data(
-        folder_dataset: ImageFolderDataset,
+        folder_dataset: ImageClassificationFolderDataset,
         indices_path: str,
         test_size: float,
         use_index: bool,
@@ -161,12 +164,16 @@ class ImagesDataModule(LightningDataModule):
         dataset: str,
         root_dir: str,
         batch_size: int,
+        train_folder_dataset: Union[
+            ImageClassificationFolderDataset, ImageAutoencoderFolderDataset
+        ],
+        test_folder_dataset: Union[
+            ImageClassificationFolderDataset, ImageAutoencoderFolderDataset
+        ],
         test_size: float = 0.5,
         use_index: bool = True,
         indices_dir: str = None,
         sampling: Sampling = Sampling.NONE,
-        train_transform=None,
-        test_transform=None,
     ):
         """
         Initialize the ImageDataModule.
@@ -175,12 +182,12 @@ class ImagesDataModule(LightningDataModule):
             dataset (str): Name of the dataset.
             root_dir (str): Root directory of the dataset.
             batch_size (int): Batch size for data loaders.
+            train_folder_dataset (Dataset): Dataset class to use for training.
+            test_folder_dataset (Dataset): Dataset class to use for testing.
             test_size (float, optional): Fraction of data to use as test set. Default is 0.5.
             use_index (bool, optional): Whether to use existing indices. Default is True.
             indices_dir (str, optional): Directory to save indices. Default is None.
             sampling (Sampling, optional): Sampling strategy. Default is Sampling.NONE.
-            train_transform (optional): Transformations to apply to training data. Default is None.
-            test_transform (optional): Transformations to apply to test data. Default is None.
         """
         super().__init__()
         self.save_hyperparameters()
@@ -191,12 +198,8 @@ class ImagesDataModule(LightningDataModule):
         self.sampling = sampling
 
         # Initialize training and test folders
-        self.train_folder = ImageFolderDataset(
-            root_dir=root_dir, transform=train_transform
-        )
-        self.test_folder = ImageFolderDataset(
-            root_dir=root_dir, transform=test_transform
-        )
+        self.train_folder = train_folder_dataset
+        self.test_folder = test_folder_dataset
 
         self.class_counts = self.train_folder.class_counts
         self.classes = self.train_folder.classes
@@ -270,12 +273,16 @@ class PlantDiseaseDataModule(ImagesDataModule):
         self,
         root_dir: str,
         batch_size: int,
+        train_folder_dataset: Union[
+            ImageClassificationFolderDataset, ImageAutoencoderFolderDataset
+        ],
+        test_folder_dataset: Union[
+            ImageClassificationFolderDataset, ImageAutoencoderFolderDataset
+        ],
         test_size: float = 0.5,
         use_index: bool = True,
         indices_dir: str = None,
         sampling: Sampling = Sampling.NONE,
-        train_transform=None,
-        test_transform=None,
     ):
         """
         Initialize a plant village dataset data module.
@@ -283,21 +290,21 @@ class PlantDiseaseDataModule(ImagesDataModule):
         Args:
             root_dir (str): Root directory of the dataset.
             batch_size (int): Batch size for data loaders.
+            train_folder_dataset (Dataset): Dataset class to use for training.
+            test_folder_dataset (Dataset): Dataset class to use for testing.
             test_size (float, optional): Fraction of data to use as test set. Default is 0.5.
             use_index (bool, optional): Whether to use existing indices. Default is True.
             indices_dir (str, optional): Directory to save indices. Default is None.
             sampling (Sampling, optional): Sampling strategy. Default is Sampling.NONE.
-            train_transform (optional): Transformations to apply to training data. Default is None.
-            test_transform (optional): Transformations to apply to test data. Default is None.
         """
         super().__init__(
             dataset=config.DATASET,
             root_dir=root_dir,
             batch_size=batch_size,
+            train_folder_dataset=train_folder_dataset,
+            test_folder_dataset=test_folder_dataset,
             test_size=test_size,
             use_index=use_index,
             indices_dir=indices_dir,
             sampling=sampling,
-            train_transform=train_transform,
-            test_transform=test_transform,
         )
