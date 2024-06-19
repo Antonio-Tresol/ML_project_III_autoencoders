@@ -33,7 +33,7 @@ class InConv(nn.Module):
 
 
 class Down(nn.Module):
-    def __init__(self, in_ch, out_ch, stride: int):
+    def __init__(self, in_ch, out_ch, stride: int = 1):
         super(Down, self).__init__()
         self.mpconv = nn.Sequential(
             nn.MaxPool2d(2, stride=stride), DoubleConv(in_ch, out_ch)
@@ -78,10 +78,10 @@ class Encoder(nn.Module):
         super().__init__()
         self.n_channels = in_channels
         self.inc = InConv(in_channels, 64)
-        self.down1 = Down(64, 128)
-        self.down2 = Down(128, 256)
-        self.down3 = Down(256, 512)
-        self.down4 = Down(512, 512)
+        self.down1 = Down(64, 128, stride=4)
+        self.down2 = Down(128, 256, stride=4)
+        self.down3 = Down(256, 512, stride=4)
+        self.down4 = Down(512, 512, stride=4)
 
     def forward(self, x):
         x1 = self.inc(x)
@@ -93,15 +93,14 @@ class Encoder(nn.Module):
         return outputs
 
 
-class Encoder(nn.Module):
-    def __init__(self, in_channels):
+class Decoder(nn.Module):
+    def __init__(self, out_channels):
         super().__init__()
-        self.down1 = Down(in_channels, 512)
-        self.down2 = Down(512, 256)
-        self.down3 = Down(256, 128)
-        self.down4 = Down(128, 64)
-        self.down5 = Down(64, 64)
-        self.outc = OutConv(64, 1)
+        self.up1 = Up(1024, 256)
+        self.up2 = Up(512, 128)
+        self.up3 = Up(256, 64)
+        self.up4 = Up(128, 64)
+        self.outc = OutConv(64, out_channels)
 
     def forward(self, encoder_outputs):
         encoder_outputs = encoder_outputs[::-1]
@@ -114,24 +113,16 @@ class Encoder(nn.Module):
 
 
 class Unet(nn.Module):
-    def __init__(self, in_channels):
+    def __init__(self, in_channels, device):
         super(Unet, self).__init__()
         self.n_channels = in_channels
-        self.encoder = Encoder
-        self.decoder = Decoder(in_channels=in_channels)
+        self.encoder = Encoder(in_channels=in_channels).to(device)
+        self.decoder = Decoder(out_channels=in_channels).to(device)
 
     def forward(self, x):
-        x1 = self.inc(x)
-        x2 = self.down1(x1)
-        x3 = self.down2(x2)
-        x4 = self.down3(x3)
-        x5 = self.down4(x4)
-        x = self.up1(x5, x4)
-        x = self.up2(x, x3)
-        x = self.up3(x, x2)
-        x = self.up4(x, x1)
-        x = self.outc(x)
-        return x
+        encoded = self.encoder(x)
+        decoded = self.decoder(encoded)
+        return decoded
 
 
 def get_unet_transformations():

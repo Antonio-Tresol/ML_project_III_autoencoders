@@ -27,10 +27,10 @@ class BaseMetricsLogger:
         pass
 
 
-class DefaultLogger(BaseMetricsLogger):
+class DataframeLogger(BaseMetricsLogger):
     def __init__(self, prefix, module, metric_name, data):
         """
-        Base class for logging metrics
+        Dataframe logger
 
         Args:
             prefix (str): Prefix to add to the metric name
@@ -47,8 +47,8 @@ class DefaultLogger(BaseMetricsLogger):
         """
         Abstract method to log the metrics
         """
-        self.module.log(f"{self.prefix}{self.metric_name}", self.data)
-
+        dataframe = wandb.Table(dataframe=self.data[0])
+        self.module.logger.experiment.log({f"{self.prefix}{self.metric_name}": dataframe})
 
 class DictLogger(BaseMetricsLogger):
     def __init__(self, prefix, module, metrics):

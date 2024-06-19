@@ -417,7 +417,7 @@ class AutoencoderLightningModule(BaseLightningModule):
     """
 
     def __init__(
-        self, model, model_name, loss_fn, metrics, lr, scheduler_max_it, weight_decay=0
+        self, model, model_name, loss_fn, metrics, lr, scheduler_max_it, weight_decay=0, class_names=None
     ):
         super(AutoencoderLightningModule, self).__init__(
             model=model,
@@ -428,11 +428,11 @@ class AutoencoderLightningModule(BaseLightningModule):
             scheduler_max_it=scheduler_max_it,
             weight_decay=weight_decay,
         )
-
+        self.class_names = class_names
         self.test_latent_vectors = []
         self.test_labels = []
         self.test_images = []
-        self.test_latent_space = None
+        self.test_latent_space = []
 
         self.configure_metrics_managers()
         self.configure_loggers()
@@ -480,7 +480,7 @@ class AutoencoderLightningModule(BaseLightningModule):
                     metrics=self.test_metrics,
                     table_name="Metrics",
                 ),
-                DefaultLogger(
+                DataframeLogger(
                     prefix="test/",
                     metric_name="LatentSpace",
                     module=self,
@@ -544,10 +544,11 @@ class AutoencoderLightningModule(BaseLightningModule):
         labels = batch[1][1]
         batch = [batch[0], batch[1][0]]
         latent_vectors = self.model.encoder(batch[0])
-        print(latent_vectors[0].shape)
+        latent_vectors = latent_vectors[-1]
+
         for latent_vector in latent_vectors:
             self.test_latent_vectors.append(latent_vector.cpu().detach())
-        self.test_labels.append(labels)
+        self.test_labels.append(labels.cpu().detach().numpy())
         self.test_images.append(batch[0])
 
         return super().test_step(batch, batch_idx)
@@ -562,20 +563,31 @@ class AutoencoderLightningModule(BaseLightningModule):
             for latent_vector in self.test_latent_vectors
         ]
         df = pd.DataFrame(flatten)
+        df.columns = df.columns.astype(str)
+        df.index = df.index.astype(str)
 
         # Create a "target" column
-        df["labels"] = df["labels"].astype(str)
-        cols = df.columns.tolist()
+        df["target"] = np.array(self.test_labels).flatten()
+        if self.class_names is not None:
+            df["target"] = df["target"].map(lambda x: self.class_names[x])
+        cols = df.columns.astype(str).tolist()
         df = df[cols[-1:] + cols[:-1]]
 
+        """
         # Create an "image" column
         df["images"] = [
             wandb.Image(image.permute(1, 2, 0).cpu().detach().numpy())
-            for image in self.test_images
+            for image_batch in self.test_images for image in image_batch 
         ]
-
         cols = df.columns.tolist()
         df = df[cols[-1:] + cols[:-1]]
+        """
 
-        self.test_latent_space = df
+
+        self.test_latent_space.append(df.copy())
         super().on_test_epoch_end()
+        
+        self.test_latent_vectors = []
+        self.test_labels = []
+        self.test_images = []
+        self.test_latent_space = []

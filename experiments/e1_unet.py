@@ -63,7 +63,7 @@ def main():
     plant_dm.create_data_loaders()
 
     for i in range(config.NUM_TRIALS):
-        unet = Unet(device=device)
+        unet = Unet(in_channels=3, device=device)
         model = AutoencoderLightningModule(
             model=unet,
             model_name="unet",
@@ -71,6 +71,7 @@ def main():
             metrics=metrics,
             lr=config.LR,
             scheduler_max_it=config.SCHEDULER_MAX_IT,
+            class_names=config.CLASS_NAMES
         )
 
         early_stop_callback = EarlyStopping(
