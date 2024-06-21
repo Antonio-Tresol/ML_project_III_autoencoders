@@ -170,3 +170,5 @@ wandb/
 checkpoints/
 indices/
 
+experimentdesing.out
+job.sh
