@@ -2,7 +2,7 @@ from helper_functions import get_unique_labels
 
 DATASET = "plantvillage"
 ROOT_DIR = r"dataset/plantvillage_dataset/"
-LR = 0.001
+LR = 0.0003
 SCHEDULER_MAX_IT = 30
 WEIGH_DECAY = 1e-4
 EPSILON = 1e-4
@@ -11,8 +11,8 @@ EPSILON = 1e-4
 BATCH_SIZE = 64
 TEST_SIZE = 0.1
 TRAIN_SIZE = 1 - TEST_SIZE
-EPOCHS = 2
-USE_INDEX = False
+EPOCHS = 15
+USE_INDEX = True 
 # callback
 PATIENCE = 3
 
