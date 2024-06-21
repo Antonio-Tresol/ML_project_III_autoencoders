@@ -71,7 +71,7 @@ def main():
             metrics=metrics,
             lr=config.LR,
             scheduler_max_it=config.SCHEDULER_MAX_IT,
-            class_names=config.CLASS_NAMES
+            class_names=config.CLASS_NAMES,
         )
 
         early_stop_callback = EarlyStopping(

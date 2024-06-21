@@ -13,9 +13,9 @@ class DoubleConv(nn.Module):
 
     Parameters
     ----------
-    in_ch : int
+    input_channels : int
         Number of input channels.
-    out_ch : int
+    output_channels : int
         Number of output channels.
 
     Attributes
@@ -24,14 +24,14 @@ class DoubleConv(nn.Module):
         Sequential container of two convolutional blocks.
     """
 
-    def __init__(self, in_ch: int, out_ch: int) -> None:
+    def __init__(self, input_channels: int, output_channels: int) -> None:
         super().__init__()
         self.conv = nn.Sequential(
-            nn.Conv2d(in_ch, out_ch, 3, padding=1),
-            nn.BatchNorm2d(out_ch),
+            nn.Conv2d(input_channels, output_channels, 3, padding=1),
+            nn.BatchNorm2d(output_channels),
             nn.ReLU(inplace=True),
-            nn.Conv2d(out_ch, out_ch, 3, padding=1),
-            nn.BatchNorm2d(out_ch),
+            nn.Conv2d(output_channels, output_channels, 3, padding=1),
+            nn.BatchNorm2d(output_channels),
             nn.ReLU(inplace=True),
         )
 
@@ -61,9 +61,9 @@ class InConv(nn.Module):
 
     Parameters
     ----------
-    in_ch : int
+    input_channels : int
         Number of input channels.
-    out_ch : int
+    output_channels : int
         Number of output channels.
 
     Attributes
@@ -72,9 +72,9 @@ class InConv(nn.Module):
         The double convolution module.
     """
 
-    def __init__(self, in_ch: int, out_ch: int) -> None:
+    def __init__(self, input_channels: int, output_channels: int) -> None:
         super().__init__()
-        self.conv = DoubleConv(in_ch, out_ch)
+        self.conv = DoubleConv(input_channels, output_channels)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -102,9 +102,9 @@ class Down(nn.Module):
 
     Parameters
     ----------
-    in_ch : int
+    input_channels : int
         Number of input channels.
-    out_ch : int
+    output_channels : int
         Number of output channels.
     stride : int, optional
         Stride of the max pooling operation. Default is 1.
@@ -115,10 +115,12 @@ class Down(nn.Module):
         Sequential container of max pooling and double convolution.
     """
 
-    def __init__(self, in_ch: int, out_ch: int, stride: int = 1) -> None:
+    def __init__(
+        self, input_channels: int, output_channels: int, stride: int = 1
+    ) -> None:
         super().__init__()
         self.mpconv = nn.Sequential(
-            nn.MaxPool2d(2, stride=stride), DoubleConv(in_ch, out_ch)
+            nn.MaxPool2d(2, stride=stride), DoubleConv(input_channels, output_channels)
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -148,9 +150,9 @@ class Up(nn.Module):
 
     Parameters
     ----------
-    in_ch : int
+    input_channels : int
         Number of input channels for the upsampling module.
-    out_ch : int
+    output_channels : int
         Number of output channels after the double convolution.
 
     Attributes
@@ -161,11 +163,13 @@ class Up(nn.Module):
         Double convolution module to process the merged tensor.
     """
 
-    def __init__(self, in_ch: int, out_ch: int) -> None:
+    def __init__(self, input_channels: int, output_channels: int) -> None:
         super().__init__()
 
-        self.up = nn.ConvTranspose2d(in_ch // 2, in_ch // 2, 2, stride=2)
-        self.conv = DoubleConv(in_ch, out_ch)
+        self.up = nn.ConvTranspose2d(
+            input_channels // 2, input_channels // 2, 2, stride=2
+        )
+        self.conv = DoubleConv(input_channels, output_channels)
 
     def forward(self, x1: torch.Tensor, x2: torch.Tensor) -> torch.Tensor:
         """
@@ -203,9 +207,9 @@ class OutConv(nn.Module):
 
     Parameters
     ----------
-    in_ch : int
+    input_channels : int
         Number of input channels.
-    out_ch : int
+    output_channels : int
         Number of output channels.
 
     Attributes
@@ -214,9 +218,9 @@ class OutConv(nn.Module):
         Convolution layer to produce the output tensor.
     """
 
-    def __init__(self, in_ch: int, out_ch: int):
+    def __init__(self, input_channels: int, output_channels: int):
         super().__init__()
-        self.conv = nn.Conv2d(in_ch, out_ch, 1)
+        self.conv = nn.Conv2d(input_channels, output_channels, 1)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -245,7 +249,7 @@ class Encoder(nn.Module):
 
     Parameters
     ----------
-    in_channels : int
+    input_channels : int
         Number of channels in the input tensor.
 
     Attributes
@@ -264,10 +268,10 @@ class Encoder(nn.Module):
         Fourth downsampling module.
     """
 
-    def __init__(self, in_channels: int) -> None:
+    def __init__(self, input_channels: int) -> None:
         super().__init__()
-        self.n_channels = in_channels
-        self.inc = InConv(in_channels, 64)
+        self.n_channels = input_channels
+        self.inc = InConv(input_channels, 64)
         self.down1 = Down(64, 128, stride=4)
         self.down2 = Down(128, 256, stride=4)
         self.down3 = Down(256, 512, stride=4)
@@ -306,7 +310,7 @@ class Decoder(nn.Module):
 
     Parameters
     ----------
-    out_channels : int
+    output_channels : int
         Number of channels in the output tensor.
 
     Attributes
@@ -323,13 +327,13 @@ class Decoder(nn.Module):
         Output convolution module.
     """
 
-    def __init__(self, out_channels: int) -> None:
+    def __init__(self, output_channels: int) -> None:
         super().__init__()
         self.up1 = Up(1024, 256)
         self.up2 = Up(512, 128)
         self.up3 = Up(256, 64)
         self.up4 = Up(128, 64)
-        self.outc = OutConv(64, out_channels)
+        self.outc = OutConv(64, output_channels)
 
     def forward(self, encoder_outputs: list[torch.Tensor]) -> torch.Tensor:
         """
@@ -382,8 +386,8 @@ class Unet(nn.Module):
     def __init__(self, in_channels: int, device: torch.device) -> None:
         super().__init__()
         self.n_channels = in_channels
-        self.encoder = Encoder(in_channels=in_channels).to(device)
-        self.decoder = Decoder(out_channels=in_channels).to(device)
+        self.encoder = Encoder(input_channels=in_channels).to(device)
+        self.decoder = Decoder(output_channels=in_channels).to(device)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
