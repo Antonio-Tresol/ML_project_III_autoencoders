@@ -14,16 +14,19 @@ def main():
     from pytorch_lightning.loggers import WandbLogger
     from helper_functions import count_classes
 
-    from models.lightning_module import AutoencoderLightningModule
+    from models.lightning_module import ClassificationLightningModule
     from pytorch_lightning.callbacks import ModelCheckpoint
     from pytorch_lightning import Trainer
     from pytorch_lightning.callbacks import EarlyStopping
-    from data.data_modules import PlantDiseaseDataModule, Sampling
-    from data.datasets import ImageAutoencoderFolderDataset
-    from torchmetrics.regression import MeanAbsoluteError, MeanSquaredError
-
+    from data.datasets import ImageClassificationFolderDataset
+    from data.data_modules import ImagesDataModule, Sampling
+    from torchmetrics.classification import (
+        MulticlassAccuracy,
+        MulticlassPrecision,
+        MulticlassRecall,
+    )
     from torchmetrics import MetricCollection
-    from models.unet import Unet, get_unet_transformations
+    from models.convnext import ConvNext, get_conv_model_transformations
     from torch import nn
     import wandb
     import configuration as config
@@ -35,25 +38,36 @@ def main():
 
     metrics = MetricCollection(
         {
-            "AbsoulteError": MeanAbsoluteError(),
+            "Accuracy": MulticlassAccuracy(num_classes=class_count, average="micro"),
+            "Precision": MulticlassPrecision(num_classes=class_count),
+            "Recall": MulticlassRecall(num_classes=class_count),
+        }
+    )
+    vector_metrics = MetricCollection(
+        {
+            "Accuracy": MulticlassAccuracy(num_classes=class_count, average=None),
+            "Precision": MulticlassPrecision(num_classes=class_count, average=None),
+            "Recall": MulticlassRecall(num_classes=class_count, average=None),
         }
     )
 
-    train_transform, test_transform = get_unet_transformations()
+    train_transform, test_transform = get_conv_model_transformations()
 
-    train_dataset = ImageAutoencoderFolderDataset(
+    train_dataset = ImageClassificationFolderDataset(
         root_dir=config.ROOT_DIR, transform=train_transform
     )
-    test_dataset = ImageAutoencoderFolderDataset(
+    test_dataset = ImageClassificationFolderDataset(
         root_dir=config.ROOT_DIR, transform=test_transform
     )
 
-    plant_dm = PlantDiseaseDataModule(
+    plant_dm = ImagesDataModule(
+        dataset=config.DATASET_80_20_NAME,
         root_dir=config.ROOT_DIR,
         batch_size=config.BATCH_SIZE,
         train_folder_dataset=train_dataset,
         test_folder_dataset=test_dataset,
-        test_size=config.TEST_SIZE,
+        train_size=config.TRAIN_SIZE_80_20,
+        test_size=config.TEST_SIZE_80_20,
         use_index=config.USE_INDEX,
         indices_dir=config.INDICES_DIR,
         sampling=Sampling.NONE,
@@ -63,14 +77,16 @@ def main():
     plant_dm.create_data_loaders()
 
     for i in range(config.NUM_TRIALS):
-        unet = Unet(in_channels=3, device=device)
-        model = AutoencoderLightningModule(
-            model=unet,
-            model_name="unet",
-            loss_fn=nn.MSELoss(),
+        convnext = ConvNext(num_classes=class_count, device=device)
+        model = ClassificationLightningModule(
+            model=convnext,
+            model_name=config.CONVNEXT_80_20_FILENAME.replace("_", ""),
+            loss_fn=nn.CrossEntropyLoss(),
             metrics=metrics,
+            vectorized_metrics=vector_metrics,
             lr=config.LR,
             scheduler_max_it=config.SCHEDULER_MAX_IT,
+            vector_metrics=vector_metrics,
             class_names=config.CLASS_NAMES,
         )
 
@@ -84,13 +100,15 @@ def main():
 
         checkpoint_callback = ModelCheckpoint(
             monitor="val/loss",
-            dirpath=config.AUTOENCODER_DIR,
-            filename=config.AUTOENCODER_FILENAME + str(i),
+            dirpath=config.CONVNEXT_80_20_DIR,
+            filename=config.CONVNEXT_80_20_FILENAME + str(i),
             save_top_k=config.TOP_K_SAVES,
             mode="min",
         )
 
-        id = config.AUTOENCODER_FILENAME + str(i) + "_" + wandb.util.generate_id()
+        id = (
+            config.CONVNEXT_80_20_FILENAME + str(i) + "_" + wandb.util.generate_id()
+        )
         wandb_logger = WandbLogger(project=config.WANDB_PROJECT, id=id, resume="allow")
 
         trainer = Trainer(
@@ -102,7 +120,7 @@ def main():
 
         trainer.fit(model, datamodule=plant_dm)
         trainer.test(model, datamodule=plant_dm)
-
+        
         wandb.finish()
 
 

@@ -1,4 +1,3 @@
-# sin filtro
 def main():
     import os
     import sys
@@ -15,20 +14,19 @@ def main():
     from pytorch_lightning.loggers import WandbLogger
     from helper_functions import count_classes
 
-    from models.image_classifier_module import ClassificationLightningModule
+    from models.lightning_module import ClassificationLightningModule
     from pytorch_lightning.callbacks import ModelCheckpoint
     from pytorch_lightning import Trainer
     from pytorch_lightning.callbacks import EarlyStopping
-    from data.data_modules import CovidDataModule, Sampling
+    from data.datasets import ImageClassificationFolderDataset
+    from data.data_modules import ImagesDataModule, Sampling
     from torchmetrics.classification import (
         MulticlassAccuracy,
-        MulticlassConfusionMatrix,
         MulticlassPrecision,
         MulticlassRecall,
     )
     from torchmetrics import MetricCollection
-    from models.mlp import MLP, get_mlp_transformations
-
+    from models.convnext import ConvNext, get_conv_model_transformations
     from torch import nn
     import wandb
     import configuration as config
@@ -41,7 +39,6 @@ def main():
     metrics = MetricCollection(
         {
             "Accuracy": MulticlassAccuracy(num_classes=class_count, average="micro"),
-            "BalancedAccuracy": MulticlassAccuracy(num_classes=class_count),
             "Precision": MulticlassPrecision(num_classes=class_count),
             "Recall": MulticlassRecall(num_classes=class_count),
         }
@@ -54,41 +51,43 @@ def main():
         }
     )
 
-    train_transform, test_transform = get_mlp_transformations()
+    train_transform, test_transform = get_conv_model_transformations()
 
-    covid_dm = CovidDataModule(
-        root_dir=config.MLP_FEATURES_DIR,
+    train_dataset = ImageClassificationFolderDataset(
+        root_dir=config.ROOT_DIR, transform=train_transform
+    )
+    test_dataset = ImageClassificationFolderDataset(
+        root_dir=config.ROOT_DIR, transform=test_transform
+    )
+
+    plant_dm = ImagesDataModule(
+        dataset=config.DATASET_50_50_NAME,
+        root_dir=config.ROOT_DIR,
         batch_size=config.BATCH_SIZE,
-        test_size=config.TEST_SIZE,
+        train_folder_dataset=train_dataset,
+        test_folder_dataset=test_dataset,
+        train_size=config.TRAIN_SIZE_50_50,
+        test_size=config.TEST_SIZE_50_50,
         use_index=config.USE_INDEX,
         indices_dir=config.INDICES_DIR,
         sampling=Sampling.NONE,
-        train_transform=train_transform,
-        test_transform=test_transform,
     )
 
-    covid_dm.prepare_data()
-    covid_dm.create_data_loaders()
+    plant_dm.prepare_data()
+    plant_dm.create_data_loaders()
 
-    metrics_data = []
     for i in range(config.NUM_TRIALS):
-        mlp = MLP(
-            input_size=3072,
-            hidden_layer_count=1,
-            hidden_layer_size=10,
-            output_size=class_count,
-            device=device,
-        )
-
+        convnext = ConvNext(num_classes=class_count, device=device)
         model = ClassificationLightningModule(
-            model=mlp,
-            model_name="MLP",
-            class_names=config.CLASS_NAMES,
+            model=convnext,
+            model_name=config.CONVNEXT_50_50_FILENAME.replace("_", ""),
             loss_fn=nn.CrossEntropyLoss(),
             metrics=metrics,
+            vectorized_metrics=vector_metrics,
             lr=config.LR,
             scheduler_max_it=config.SCHEDULER_MAX_IT,
-            per_class_metrics=vector_metrics,
+            vector_metrics=vector_metrics,
+            class_names=config.CLASS_NAMES,
         )
 
         early_stop_callback = EarlyStopping(
@@ -101,13 +100,15 @@ def main():
 
         checkpoint_callback = ModelCheckpoint(
             monitor="val/loss",
-            dirpath=config.MLP_DIR,
-            filename=config.MLP_FILENAME + str(i),
+            dirpath=config.CONVNEXT_50_50_DIR,
+            filename=config.CONVNEXT_50_50_FILENAME + str(i),
             save_top_k=config.TOP_K_SAVES,
             mode="min",
         )
 
-        id = config.MLP_FILENAME + str(i) + "_" + wandb.util.generate_id()
+        id = (
+            config.CONVNEXT_50_50_FILENAME + str(i) + "_" + wandb.util.generate_id()
+        )
         wandb_logger = WandbLogger(project=config.WANDB_PROJECT, id=id, resume="allow")
 
         trainer = Trainer(
@@ -117,14 +118,10 @@ def main():
             log_every_n_steps=1,
         )
 
-        trainer.fit(model, datamodule=covid_dm)
-
-        # save the metrics per class as well as the confusion matrix to a csv file
-        metrics_data.append(trainer.test(model, datamodule=covid_dm)[0])
-
+        trainer.fit(model, datamodule=plant_dm)
+        trainer.test(model, datamodule=plant_dm)
+        
         wandb.finish()
-
-    pd.DataFrame(metrics_data).to_csv(config.MLP_CSV_FILENAME, index=False)
 
 
 if __name__ == "__main__":

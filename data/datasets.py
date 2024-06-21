@@ -165,3 +165,55 @@ class ImageAutoencoderFolderDataset(Dataset):
         if self.transform:
             image = self.transform(image)
         return image, [image, label]
+
+
+
+class ImageDenoisingAutoencoderFolderDataset(Dataset):
+    def __init__(self, root_dir: str, noise_transform, transform=None):
+        """
+        
+        
+        Args:
+            root_dir (str): The root directory containing image folders.
+            noise_transform (object): The transformation to be applied to add noise to the image.
+            transform (optional): An optional transform to be applied to the images.
+        """
+        super().__init__()
+        self.root_dir = root_dir
+        self.noise_transform = noise_transform
+        self.transform = transform
+
+        # Count files in each folder
+        self.folders = FolderScanner.count_files(root_dir=self.root_dir)
+
+        self.images, self.labels, self.class_counts, self.classes = (
+            ImageListBuilder.build_list(root_dir=self.root_dir, folders=self.folders)
+        )
+
+    def __len__(self):
+        """
+        Get the total number of images in the dataset.
+
+        Returns:
+            int: Total number of images.
+        """
+        return len(self.images)
+
+    def __getitem__(self, idx):
+        """
+        Get an image and its corresponding label at the specified index.
+
+        Args:
+            idx (int): Index of the image to retrieve.
+
+        Returns:
+            tuple: A tuple containing the image and its label.
+        """
+        image = Image.open(self.images[idx]).convert("RGB")
+        label = self.labels[idx]
+        if self.transform:
+            image = self.transform(image)
+        
+        noisy_image = self.noise_transform(image)
+        
+        return noisy_image, [image, label]
