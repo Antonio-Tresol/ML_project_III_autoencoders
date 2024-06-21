@@ -8,6 +8,8 @@ from models.metrics_manager import *
 import pandas as pd
 import wandb
 import configuration as config
+import numpy as np
+from itertools import chain
 
 
 class BaseLightningModule(LightningModule):
@@ -417,7 +419,15 @@ class AutoencoderLightningModule(BaseLightningModule):
     """
 
     def __init__(
-        self, model, model_name, loss_fn, metrics, lr, scheduler_max_it, weight_decay=0, class_names=None
+        self,
+        model,
+        model_name,
+        loss_fn,
+        metrics,
+        lr,
+        scheduler_max_it,
+        weight_decay=0,
+        class_names=None,
     ):
         super(AutoencoderLightningModule, self).__init__(
             model=model,
@@ -566,27 +576,17 @@ class AutoencoderLightningModule(BaseLightningModule):
         df.columns = df.columns.astype(str)
         df.index = df.index.astype(str)
 
-        # Create a "target" column
-        df["target"] = np.array(self.test_labels).flatten()
+        flattened_list = list(chain.from_iterable(self.test_labels))
+        df["target"] = np.array(flattened_list)
+
         if self.class_names is not None:
             df["target"] = df["target"].map(lambda x: self.class_names[x])
         cols = df.columns.astype(str).tolist()
         df = df[cols[-1:] + cols[:-1]]
 
-        """
-        # Create an "image" column
-        df["images"] = [
-            wandb.Image(image.permute(1, 2, 0).cpu().detach().numpy())
-            for image_batch in self.test_images for image in image_batch 
-        ]
-        cols = df.columns.tolist()
-        df = df[cols[-1:] + cols[:-1]]
-        """
-
-
         self.test_latent_space.append(df.copy())
         super().on_test_epoch_end()
-        
+
         self.test_latent_vectors = []
         self.test_labels = []
         self.test_images = []
