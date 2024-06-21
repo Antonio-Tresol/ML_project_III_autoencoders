@@ -100,7 +100,7 @@ def main():
             log_every_n_steps=1,
         )
 
-        # trainer.fit(model, datamodule=plant_dm)
+        trainer.fit(model, datamodule=plant_dm)
         trainer.test(model, datamodule=plant_dm)
 
         wandb.finish()
