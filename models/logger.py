@@ -122,8 +122,7 @@ class ConfusionMatrixLogger(BaseMetricsLogger):
             y_true (np.array): True labels
             pred (np.array): Predicted labels
         """
-        figsize = (30, 20)
-        small_figsize = (8, 6)
+        figsize = (40, 30)
         plt.rcParams["font.size"] = 12
         cm = confusion_matrix(y_true, pred)
         plot = plt.figure(figsize=figsize)
