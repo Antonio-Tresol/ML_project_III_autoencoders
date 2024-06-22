@@ -31,6 +31,22 @@ class Sampling(Enum):
     SKLEARN = 2
     NONE = 3
 
+def get_preset_indices_labels(preset_indices : list[int], dataset: ImageClassificationFolderDataset) -> list[int]:
+    """
+    Retrives the labels of given a list of indices from the root dataset dir. 
+
+    Parameters
+    ----------
+    preset_indices: list[int]
+        the list of indices to index the root dataset for labels
+    dataset: ImageClassificationFolderDataset 
+    Returns
+    ------- 
+    labels: list[int]
+        the labels of the preset_indices
+    """
+    labels = [dataset[index][1] for index in preset_indices]
+    return labels
 
 # Utility class for managing indices
 class IndexManager:
@@ -80,7 +96,7 @@ class IndexManager:
                 preset_indices,
                 train_size=train_size,
                 test_size=test_size,
-                stratify=folder_dataset.labels,
+                stratify=get_preset_indices_labels(preset_indices, folder_dataset),
             )
         else:
             indices = train_test_split(
