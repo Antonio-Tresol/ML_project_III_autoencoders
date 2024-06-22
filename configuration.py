@@ -10,7 +10,7 @@ EPSILON = 1e-4
 # train loop
 BATCH_SIZE = 64
 EPOCHS = 15
-USE_INDEX = True
+USE_INDEX = True 
 # callback
 PATIENCE = 3
 TOP_K_SAVES = 1

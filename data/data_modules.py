@@ -59,8 +59,8 @@ class IndexManager:
         """
         with open(indices_path, "rb") as file:
             return pickle.load(file)
-        
-    def create_indices(self, folder_dataset, indices_path, train_size, test_size, preset_indices):
+    @staticmethod    
+    def create_indices(folder_dataset, indices_path, train_size, test_size, preset_indices):
         """
         Create indices for training and testing.
 
@@ -89,7 +89,7 @@ class IndexManager:
                 test_size=test_size,
                 stratify=folder_dataset.labels,
             )
-        self.save_indices(indices, indices_path)
+        IndexManager.save_indices(indices, indices_path)
         return indices
 
 
@@ -122,6 +122,7 @@ class DataSplitter:
                 indices = IndexManager.load_indices(indices_path)
             except:
                 indices = IndexManager.create_indices(folder_dataset, indices_path, train_size, test_size, preset_indices)
+            return indices
         else:
             indices = IndexManager.create_indices(folder_dataset, indices_path, train_size, test_size, preset_indices)
             return indices
