@@ -169,7 +169,7 @@ indices/COVID-19_Radiography_Dataset.pkl
 wandb/
 checkpoints/
 indices/
-
+analisis/artifacts/
 experimentdesing.out
 job.sh
 50_35_job.sh
