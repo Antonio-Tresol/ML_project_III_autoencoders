@@ -82,7 +82,7 @@ def main():
 
     for i in range(config.NUM_TRIALS):
         checkpoint_filename = (
-            config.CONVNEXT_80_20_DIR + config.CONVNEXT_80_20_FILENAME + str(i) + ".ckpt"
+            config.AUTOENCODER_80_20_DIR + config.AUTOENCODER_80_20_FILENAME + str(i) + ".ckpt"
         )
         unet = Unet(in_channels=3, device=device)
         encoder = AutoencoderLightningModule.load_from_checkpoint(
