@@ -100,7 +100,7 @@ class ScalarLogger(BaseMetricsLogger):
 
 
 class ConfusionMatrixLogger(BaseMetricsLogger):
-    def __init__(self, prefix, module, y_true_ref, pred_ref):
+    def __init__(self, prefix, module, y_true_ref, y_pred_ref):
         """
         Logger for logging confusion matrix
 
@@ -112,7 +112,7 @@ class ConfusionMatrixLogger(BaseMetricsLogger):
         """
         super(ConfusionMatrixLogger, self).__init__(prefix, module)
         self.y_true = y_true_ref
-        self.pred = pred_ref
+        self.pred = y_pred_ref
 
     def log_cm(self, y_true, pred):
         """
