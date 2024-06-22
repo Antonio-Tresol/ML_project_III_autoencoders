@@ -105,10 +105,9 @@ def main():
             model_name=config.DENOISING_AUTOENCODER_CLASSIFIER_80_10_10_FILENAME.replace("_", ""),
             loss_fn=nn.CrossEntropyLoss(),
             metrics=metrics,
-            vectorized_metrics=vector_metrics,
             lr=config.LR,
             scheduler_max_it=config.SCHEDULER_MAX_IT,
-            vector_metrics=vector_metrics,
+            per_class_metrics=vector_metrics,
             class_names=config.CLASS_NAMES,
         )
         

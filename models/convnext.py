@@ -15,7 +15,7 @@ class ConvNext(nn.Module):
             device (torch.device): The device to run the model on.
         """
         super().__init__()
-        self.convnext = convnext_tiny(weights=ConvNeXt_Tiny_Weights.DEFAULT).to(
+        self.convnext = convnext_tiny().to(
             device=device
         )
         self.convnext.classifier[2] = nn.Linear(
