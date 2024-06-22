@@ -172,3 +172,6 @@ indices/
 
 experimentdesing.out
 job.sh
+50_35_job.sh
+80_20_job.sh
+training_job.sh
