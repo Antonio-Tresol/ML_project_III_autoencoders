@@ -97,7 +97,7 @@ def main():
             class_names=config.CLASS_NAMES,
         ).model.encoder
 
-        classifier = MLP(input_size=config.MLP_INPUT_SIZE, hidden_layer_count=config.MLP_HIDDEN_LAYERS, hidden_layer_size=config.MLP_HIDDEN_DIM, output_size=class_count)
+        classifier = MLP(input_size=config.MLP_INPUT_SIZE, hidden_layer_count=config.MLP_HIDDEN_LAYERS, hidden_layer_size=config.MLP_HIDDEN_DIM, output_size=class_count, device=device)
         autoencoder_classifier = AutoencoderClassifier(encoder, classifier, freeze_encoder=False, device=device)
         
         model = ClassificationLightningModule(
