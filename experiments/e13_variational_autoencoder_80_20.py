@@ -64,9 +64,6 @@ def main():
     plant_dm.prepare_data()
     plant_dm.create_data_loaders()
 
-    def loss_fn(y_hat, y):
-        return nn.MSELoss().forward(y_hat, y) + nn.KLDivLoss().forward(y_hat, y)
-
     for i in range(config.NUM_TRIALS):
         vae_unet = vae.Variational_Unet(in_channels=3, device=device)
 
@@ -90,14 +87,14 @@ def main():
 
         checkpoint_callback = ModelCheckpoint(
             monitor="val/loss",
-            dirpath=config.AUTOENCODER_80_20_DIR,
-            filename=config.AUTOENCODER_80_20_FILENAME + str(i),
+            dirpath=config.VAE_80_20_DIR,
+            filename=config.VAE_80_20_FILENAME + str(i),
             save_top_k=config.TOP_K_SAVES,
             mode="min",
         )
 
         id = (
-            config.AUTOENCODER_80_20_FILENAME + str(i) + "_" + wandb.util.generate_id()
+            config.VAE_80_20_FILENAME + str(i) + "_" + wandb.util.generate_id()
         )
         wandb_logger = WandbLogger(project=config.WANDB_PROJECT, id=id, resume="allow")
 
