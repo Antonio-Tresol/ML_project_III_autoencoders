@@ -1,9 +1,7 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import torchvision
 
-from models.unet import Down, InConv, Up, Decoder
+from models.unet import Down, InConv, Decoder
 
 class Variational_Encoder(nn.Module):
     def __init__(self, input_channels: int) -> None:
@@ -47,28 +45,6 @@ class Variational_Encoder(nn.Module):
         outputs = [means, log_vars]
 
         return outputs
-
-class Variational_Decoder(nn.Module):
-    def __init__(self, output_channels: int) -> None:
-        super().__init__()
-        self.up1 = Up(1024, 256)
-        self.up2 = Up(512, 128)
-        self.up3 = Up(256, 64)
-        self.up4 = Up(128, 64)
-        self.decoder = nn.Sequential(
-            nn.Conv2d(64, output_channels, kernel_size=1),
-            nn.LeakyReLU()
-        )
-
-    def forward(self, encoder_outputs: torch.Tensor) -> torch.Tensor:
-        x = encoder_outputs[-1]
-        x = self.up1(x, encoder_outputs[-2])
-        x = self.up2(x, encoder_outputs[-3])
-        x = self.up3(x, encoder_outputs[-4])
-        x = self.up4(x, encoder_outputs[-5])
-        x = self.decoder(x)
-
-        return x
 
 class Reparameterizer(nn.Module):
     def __init__(self) -> None:
