@@ -6,7 +6,7 @@ import torchvision
 from models.unet import Down, InConv, Up, Decoder
 
 class Variational_Encoder(nn.Module):
-    def __init__(self, input_channels: int, latent_dim: int = 256) -> None:
+    def __init__(self, input_channels: int) -> None:
         super().__init__()
         self.n_channels = input_channels
         self.inc = InConv(input_channels, 64)
@@ -15,39 +15,36 @@ class Variational_Encoder(nn.Module):
         self.down3 = Down(256, 512, stride=4)
         self.down4 = Down(512, 512, stride=4)
 
+        kernel_size = 1
+
         # latent space
-        self.mean1 = nn.Conv2d(64, latent_dim, kernel_size=1)
-        self.log_var1 = nn.Conv2d(64, latent_dim, kernel_size=1)
+        self.mean1 = nn.Conv2d(64, 64, kernel_size=kernel_size)
+        self.log_var1 = nn.Conv2d(64, 64, kernel_size=kernel_size)
 
-        self.mean2 = nn.Conv2d(128, latent_dim, kernel_size=1)
-        self.log_var2 = nn.Conv2d(128, latent_dim, kernel_size=1)
+        self.mean2 = nn.Conv2d(128, 128, kernel_size=kernel_size)
+        self.log_var2 = nn.Conv2d(128, 128, kernel_size=kernel_size)
 
-        self.mean3 = nn.Conv2d(256, latent_dim, kernel_size=1)
-        self.log_var3 = nn.Conv2d(256, latent_dim, kernel_size=1)
+        self.mean3 = nn.Conv2d(256, 256, kernel_size=kernel_size)
+        self.log_var3 = nn.Conv2d(256, 256, kernel_size=kernel_size)
 
-        self.mean4 = nn.Conv2d(512, latent_dim, kernel_size=1)
-        self.log_var4 = nn.Conv2d(512, latent_dim, kernel_size=1)
+        self.mean4 = nn.Conv2d(512, 512, kernel_size=kernel_size)
+        self.log_var4 = nn.Conv2d(512, 512, kernel_size=kernel_size)
 
-        self.mean5 = nn.Conv2d(512, latent_dim, kernel_size=1)
-        self.log_var5 = nn.Conv2d(512, latent_dim, kernel_size=1)
+        self.mean5 = nn.Conv2d(512, 512, kernel_size=kernel_size)
+        self.log_var5 = nn.Conv2d(512, 512, kernel_size=kernel_size)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor) -> list [torch.Tensor]:
         x1 = self.inc(x)
         x2 = self.down1(x1)
         x3 = self.down2(x2)
         x4 = self.down3(x3)
         x5 = self.down4(x4)
-        
 
         # Create latent space
-        r1 = self.mean1(x1), self.log_var1(x1)
-        r2 = self.mean2(x2), self.log_var2(x2)
-        r3 = self.mean3(x3), self.log_var3(x3)
-        r4 = self.mean4(x4), self.log_var4(x4)
-        r5 = self.mean5(x5), self.log_var5(x5)
-
-
-        outputs = [r1, r2, r3, r4, r5]
+        means = [self.mean1(x1), self.mean2(x2), self.mean3(x3), self.mean4(x4), self.mean5(x5)]
+        log_vars = [self.log_var1(x1), self.log_var2(x2), self.log_var3(x3), self.log_var4(x4), self.log_var5(x5)]
+        
+        outputs = [means, log_vars]
 
         return outputs
 
@@ -77,23 +74,10 @@ class Reparameterizer(nn.Module):
     def __init__(self) -> None:
         super().__init__()
 
-    def forward(self, mu: torch.Tensor, mean, log_var) -> list[torch.Tensor]:
-        '''
-        z = []
+    def forward(self, mean: list[torch.Tensor], log_var: list[torch.Tensor]) -> list[torch.Tensor]:
+        epsilon = [ torch.randn_like(var) for var in log_var ]
 
-        for _ in range(len(logvar)):
-            std = torch.exp(0.5 * logvar)
-            eps = torch.randn_like(std)
-
-            z_i = mu + eps * std
-
-            z.append(z_i)
-
-        '''
-
-        epsilon = torch.randn_like(log_var)
-
-        z = mean + epsilon * log_var
+        z = [ mean[i] + epsilon[i] * log_var[i] for i in range(len(log_var)) ]
 
         return z
 
@@ -107,10 +91,15 @@ class Variational_Unet(nn.Module):
         self.decoder = Decoder(output_channels = in_channels).to(device)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        mean, log_var = self.encoder(x)
+        means, log_vars = self.encoder(x)
 
-        reparameterized = self.reparameterizer(mean, log_var)
+        reparameterized = self.reparameterizer(means, log_vars)
 
         decoded = self.decoder(reparameterized) 
 
         return decoded
+
+
+def vae_loss_fn(y_hat, y):
+        return nn.MSELoss().forward(y_hat, y) + nn.KLDivLoss(reduction="batchmean").forward(y_hat, y)
+

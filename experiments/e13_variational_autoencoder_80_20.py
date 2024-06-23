@@ -64,13 +64,16 @@ def main():
     plant_dm.prepare_data()
     plant_dm.create_data_loaders()
 
+    def loss_fn(y_hat, y):
+        return nn.MSELoss().forward(y_hat, y) + nn.KLDivLoss().forward(y_hat, y)
+
     for i in range(config.NUM_TRIALS):
         vae_unet = vae.Variational_Unet(in_channels=3, device=device)
 
         model = AutoencoderLightningModule(
             model=vae_unet,
             model_name=config.VAE_80_20_FILENAME.replace("_", ""),
-            loss_fn=nn.MSELoss(),
+            loss_fn=vae.vae_loss_fn,
             metrics=metrics,
             lr=config.LR,
             scheduler_max_it=config.SCHEDULER_MAX_IT,
