@@ -13,7 +13,7 @@ def main():
     from pytorch_lightning.loggers import WandbLogger
     from helper_functions import count_classes
 
-    from models.lightning_module import AutoencoderLightningModule
+    from models.lightning_module import VariationalAutoencoderLightningModule
     from pytorch_lightning.callbacks import ModelCheckpoint
     from pytorch_lightning import Trainer
     from pytorch_lightning.callbacks import EarlyStopping
@@ -65,9 +65,9 @@ def main():
     plant_dm.create_data_loaders()
 
     for i in range(config.NUM_TRIALS):
-        vae_unet = vae.Variational_Unet(in_channels=3, device=device)
+        vae_unet = vae.VAE().to(device)
 
-        model = AutoencoderLightningModule(
+        model = VariationalAutoencoderLightningModule(
             model=vae_unet,
             model_name=config.VAE_80_20_FILENAME.replace("_", ""),
             loss_fn=vae.vae_loss_fn,
