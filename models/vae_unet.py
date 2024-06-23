@@ -38,11 +38,6 @@ class Variational_Encoder(nn.Module):
         x4 = self.down3(x3)
         x5 = self.down4(x4)
         
-        print(f'shape of x1: {x1.shape}')
-        print(f'shape of x2: {x2.shape}')
-        print(f'shape of x3: {x3.shape}')
-        print(f'shape of x4: {x4.shape}')
-        print(f'shape of x5: {x5.shape}')
 
         # Create latent space
         r1 = self.mean1(x1), self.log_var1(x1)
@@ -51,11 +46,6 @@ class Variational_Encoder(nn.Module):
         r4 = self.mean4(x4), self.log_var4(x4)
         r5 = self.mean5(x5), self.log_var5(x5)
 
-        print(f'shape of r1: {r1[0].shape}')
-        print(f'shape of r2: {r2[0].shape}')    
-        print(f'shape of r3: {r3[0].shape}')
-        print(f'shape of r4: {r4[0].shape}')
-        print(f'shape of r5: {r5[0].shape}')
 
         outputs = [r1, r2, r3, r4, r5]
 
@@ -88,12 +78,6 @@ class Reparameterizer(nn.Module):
         super().__init__()
 
     def forward(self, mu: torch.Tensor, mean, log_var) -> list[torch.Tensor]:
-        print(f'len(logvar): {len(mean)}')
-        print(f'logvar: {mean.shape}')
-
-        print(f'len(logvar): {len(log_var)}')
-        print(f'logvar: {log_var.shape}')
-        
         '''
         z = []
 
@@ -110,8 +94,6 @@ class Reparameterizer(nn.Module):
         epsilon = torch.randn_like(log_var)
 
         z = mean + epsilon * log_var
-
-        print(f'shape of z: {z.shape}')
 
         return z
 
