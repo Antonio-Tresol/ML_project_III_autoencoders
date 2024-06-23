@@ -4,7 +4,6 @@ import torch.nn.functional as F
 import torchvision
 import configuration as config
 
-
 class DoubleConv(nn.Module):
     """
     A module for performing a double convolution on a tensor.
@@ -349,6 +348,7 @@ class Decoder(nn.Module):
         torch.Tensor
             The output tensor after all upsampling operations and the final convolution.
         """
+        print(type(encoder_outputs))
         encoder_outputs = encoder_outputs[::-1]
         x = self.up1(encoder_outputs[0], encoder_outputs[1])
         x = self.up2(x, encoder_outputs[2])
