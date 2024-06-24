@@ -22,11 +22,11 @@ def main():
     from torchmetrics.regression import MeanAbsoluteError, MeanSquaredError
 
     from torchmetrics import MetricCollection
-    from models.unet import Unet, get_unet_transformations
+    from models.unet import get_unet_transformations
+    from models.vae import VAE, vae_loss_fn
     from torch import nn
     import wandb
     import configuration as config
-    import models.vae_unet as vae
 
     torch.set_float32_matmul_precision("high")
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -65,12 +65,12 @@ def main():
     plant_dm.create_data_loaders()
 
     for i in range(config.NUM_TRIALS):
-        vae_unet = vae.VAE().to(device)
+        vae_unet = VAE().to(device)
 
         model = VariationalAutoencoderLightningModule(
             model=vae_unet,
             model_name=config.VAE_80_20_FILENAME.replace("_", ""),
-            loss_fn=vae.vae_loss_fn,
+            loss_fn=vae_loss_fn,
             metrics=metrics,
             lr=config.LR,
             scheduler_max_it=config.SCHEDULER_MAX_IT,
