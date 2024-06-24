@@ -115,7 +115,8 @@ class UnFlatten(nn.Module):
         return input.view(input.size(0), 256, 12, 12)
 
 class VAE(nn.Module):
-    def __init__(self, image_channels=3, h_dim=512, z_dim=32):
+    def __init__(self, image_channels=3, h_dim=512, z_dim=32, device='cuda'):
+        self.device = device
         super(VAE, self).__init__()
         self.encoder = nn.Sequential(
             # image channels, 224, 224
@@ -148,11 +149,12 @@ class VAE(nn.Module):
             DoubleUpConv(input_channels=32, output_channels=image_channels),
             # nn.Sigmoid(),
         )
+        self.to(self.device)
         
     def reparameterize(self, mu, logvar):
         std = logvar.mul(0.5).exp_()
         # return torch.normal(mu, std)
-        esp = torch.randn(*mu.size())
+        esp = torch.randn(*mu.size()).to(self.device)
         z = mu + std * esp
         return z
     
@@ -166,7 +168,6 @@ class VAE(nn.Module):
 
     def forward(self, x):
         enconded_data = self.encoder(x) 
-        print(f'Shape: {enconded_data.shape}')       
         z, mu, logvar = self.bottleneck(enconded_data)
         z = self.fully_connected_3(z)
         decoded_data = self.decoder(z)

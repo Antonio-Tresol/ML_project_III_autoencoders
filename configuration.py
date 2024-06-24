@@ -36,7 +36,7 @@ TEST_SIZE_50_35_15 = 1-TRAIN_SIZE_50_35_15
 INDICES_DIR = "indices/"
 CHECKPOINTS_DIR = "checkpoints/"
 METRICS_DIR = "metrics/"
-WANDB_PROJECT = "Plant_Disease_Classification_1"
+WANDB_PROJECT = "Plant_Disease_Classification"
 
 # dataset
 DATASET_80_20_NAME = DATASET + "_80_20"
