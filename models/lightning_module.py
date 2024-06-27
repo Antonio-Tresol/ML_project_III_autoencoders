@@ -769,7 +769,8 @@ class VariationalAutoencoderLightningModule(BaseLightningModule):
         """
         labels = batch[1][1]
         batch = [batch[0], batch[1][0]]
-        latent_vectors = self.model.encoder(batch[0])
+        encoded = self.model.encoder(batch[0])
+        latent_vectors, _, _ = self.model.bottleneck(encoded)
 
         for latent_vector in latent_vectors:
             self.test_latent_vectors.append(latent_vector.cpu().detach())
