@@ -68,7 +68,7 @@ def main():
         vae_unet = VAE().to(device)
 
         model = VariationalAutoencoderLightningModule.load_from_checkpoint(
-            config.VAE_80_20_DIR + config.AUTOENCODER_50_50_FILENAME,
+            config.VAE_80_20_DIR + config.VAE_80_20_FILENAME + "0.ckpt",
             model=vae_unet,
             model_name=config.VAE_80_20_FILENAME.replace("_", ""),
             loss_fn=vae_loss_fn,
