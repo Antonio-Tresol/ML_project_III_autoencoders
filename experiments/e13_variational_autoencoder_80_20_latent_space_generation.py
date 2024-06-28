@@ -67,7 +67,8 @@ def main():
     for i in range(config.NUM_TRIALS):
         vae_unet = VAE().to(device)
 
-        model = VariationalAutoencoderLightningModule(
+        model = VariationalAutoencoderLightningModule.load_from_checkpoint(
+            config.VAE_80_20_DIR + config.AUTOENCODER_50_50_FILENAME,
             model=vae_unet,
             model_name=config.VAE_80_20_FILENAME.replace("_", ""),
             loss_fn=vae_loss_fn,
@@ -75,12 +76,9 @@ def main():
             lr=config.LR,
             scheduler_max_it=config.SCHEDULER_MAX_IT,
             class_names=config.CLASS_NAMES,
-        ).load_from_checkpoint(config.VAE_80_20_DIR + config.AUTOENCODER_50_50_FILENAME)
-
-
-        id = (
-            config.VAE_80_20_FILENAME + str(i) + "_" + wandb.util.generate_id()
         )
+
+        id = config.VAE_80_20_FILENAME + str(i) + "_" + wandb.util.generate_id()
         wandb_logger = WandbLogger(project=config.WANDB_PROJECT, id=id, resume="allow")
 
         trainer = Trainer(
@@ -89,7 +87,7 @@ def main():
             log_every_n_steps=1,
         )
         trainer.test(model, datamodule=plant_dm)
-        
+
         wandb.finish()
 
 
